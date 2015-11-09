@@ -66,6 +66,22 @@ func (network NN) FeedForward(input matrices.Matrix) matrices.Matrix {
     return lastOutput
 }
 
+// Evaluate returns ratio of correctly clasified inputs
+func (network NN) Evaluate(inputs []matrices.Matrix, labels []float64) float64 {
+    correct := 0
+    for i, input := range inputs {
+        output := network.FeedForward(input)
+        max, err := output.MaxAt()
+        if err != nil {
+            panic(err)
+        }
+        if float64(max) == labels[i] {
+            correct++
+        }
+    }
+    return float64(correct) / float64(len(labels))
+}
+
 // func (network NN) Train(inputs []matrices.Matrix, labels matrices.Matrix, epochs int, mini_batch_size int, eta float64) {
 //
 // }
