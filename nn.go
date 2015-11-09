@@ -1,7 +1,7 @@
 package nn
 
 import (
-    "math/rand"
+    "strconv"
     "github.com/garretraziel/matrices"
 )
 
@@ -9,16 +9,54 @@ import (
 type NN struct {
     layers []int
     weights []matrices.Matrix
-    biases []matrices.Vector
+    biases []matrices.Matrix
 }
 
 // InitNN creates new neural network with given number of layers, neurons in each layer and initalizes them randomly
-func InitNN(layers []int, r *rand.Rand) *NN {
-    biases := make([]matrices.Vector, len(layers) - 1)
+func InitNN(layers []int) NN {
+    biases := make([]matrices.Matrix, len(layers) - 1)
+    weights := make([]matrices.Matrix, len(layers) - 1)
+
     for i := range layers[1:] {
-        biases[i] = matrices.RandInitVector(layers[i])
+        biases[i] = matrices.RandInitMatrix(1, layers[i + 1])
     }
-    net := NN{layers: layers, weights}
+
+    for i := range layers[1:] {
+        weights[i] = matrices.RandInitMatrix(layers[i + 1], layers[i])
+    }
+
+    net := NN{layers, weights, biases}
     // TODO
-    return &net
+    return net
+}
+
+func (network NN) String() (result string) {
+    result = "Neural network:\n"
+    result += "layers:"
+    for _, layer := range network.layers {
+        result += " " + strconv.Itoa(layer)
+    }
+    result += "\n\nweights:"
+    for _, weights := range network.weights {
+        result += "\n" + weights.String()
+    }
+    result += "\n\nbiases:"
+    for _, biases := range network.biases {
+        result += "\n" + biases.String()
+    }
+
+    return
+}
+
+// FeedForward returns output of given Network on given input
+func (network NN) FeedForward(input matrices.Matrix) matrices.Matrix {
+    lastOutput := input
+    for i := range network.weights {
+        weights := network.weights[i]
+        biases := network.biases[i]
+        multiplied, _ := lastOutput.Dot(weights.Transpose())
+        added, _ := multiplied.Add(biases)
+        lastOutput = added.Sigmoid()
+    }
+    return lastOutput
 }
