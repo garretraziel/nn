@@ -22,11 +22,10 @@ func InitNN(layers []int) NN {
     }
 
     for i := range layers[1:] {
-        weights[i] = matrices.RandInitMatrix(layers[i + 1], layers[i])
+        weights[i] = matrices.RandInitMatrix(layers[i], layers[i + 1])
     }
 
     net := NN{layers, weights, biases}
-    // TODO
     return net
 }
 
@@ -54,9 +53,19 @@ func (network NN) FeedForward(input matrices.Matrix) matrices.Matrix {
     for i := range network.weights {
         weights := network.weights[i]
         biases := network.biases[i]
-        multiplied, _ := lastOutput.Dot(weights.Transpose())
-        added, _ := multiplied.Add(biases)
+        multiplied, err := lastOutput.Dot(weights)
+        if err != nil {
+            panic(err)
+        }
+        added, err := multiplied.Add(biases)
+        if err != nil {
+            panic(err)
+        }
         lastOutput = added.Sigmoid()
     }
     return lastOutput
 }
+
+// func (network NN) Train(inputs []matrices.Matrix, labels matrices.Matrix, epochs int, mini_batch_size int, eta float64) {
+//
+// }
