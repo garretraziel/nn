@@ -109,9 +109,9 @@ func (network NN) Train(inputs []TrainItem, epochs int, miniBatchSize int, eta f
         batches := make([][]TrainItem, batchesCount)
         for i := 0; i < batchesCount; i++ {
             if i + miniBatchSize >= inputCount {
-                batches[i] = inputs[i*miniBatchSize:]
+                batches[i] = shuffled[i*miniBatchSize:]
             } else {
-                batches[i] = inputs[i*miniBatchSize:i*miniBatchSize + miniBatchSize]
+                batches[i] = shuffled[i*miniBatchSize:i*miniBatchSize + miniBatchSize]
             }
         }
 
@@ -122,6 +122,7 @@ func (network NN) Train(inputs []TrainItem, epochs int, miniBatchSize int, eta f
 }
 
 func (network NN) updateMiniBatch(batch []TrainItem, eta float64) {
+    var err error
     cxw := make([]matrices.Matrix, len(network.weights))
     cxb := make([]matrices.Matrix, len(network.biases))
     for i, m := range network.weights {
@@ -133,11 +134,50 @@ func (network NN) updateMiniBatch(batch []TrainItem, eta float64) {
 
     for _, item := range batch {
         deltaW, deltaB := network.backprop(item)
-        cxw = cxw.Add(deltaW)
-        cxb = cxb.Add(deltaB)
+        for i, delta := range deltaW {
+            cxw[i], err = cxw[i].Add(delta)
+            if err != nil {
+                panic(err)
+            }
+        }
+        for i, delta := range deltaB {
+            cxb[i], err = cxb[i].Add(delta)
+            if err != nil {
+                panic(err)
+            }
+        }
     }
+    multByConst := matrices.Mult(eta / float64(len(batch)))
     for i, w := range cxw {
-
-        network.weights[i] = network.weights[i].Sub()
+        reduced := w.Apply(multByConst)
+        network.weights[i], err = network.weights[i].Sub(reduced)
+        if err != nil {
+            panic(err)
+        }
     }
+    for i, b := range cxb {
+        reduced := b.Apply(multByConst)
+        network.biases[i], err = network.biases[i].Sub(reduced)
+        if err != nil {
+            panic(err)
+        }
+    }
+}
+
+func (network NN) backprop(item TrainItem) ([]matrices.Matrix, []matrices.Matrix) {
+    deltaW := make([]matrices.Matrix, len(network.weights))
+    deltaB := make([]matrices.Matrix, len(network.biases))
+    for i, m := range network.weights {
+        deltaW[i] = matrices.InitMatrix(m.Rows(), m.Cols())
+    }
+    for i, m := range network.biases {
+        deltaB[i] = matrices.InitMatrix(m.Rows(), m.Cols())
+    }
+
+    activation := item.Values
+    activations := make([]matrices.Matrix, len(network.weights) + 1)
+    activations[0] = item.Values
+    zs := make([]matrices.Matrix, len(network.weights))
+
+    return deltaW, deltaB
 }
