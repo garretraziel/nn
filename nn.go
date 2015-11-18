@@ -1,22 +1,10 @@
 package nn
 
 import (
-    "strconv"
+    "fmt"
     "math/rand"
     "github.com/garretraziel/matrices"
 )
-
-// TrainItem represents one item for training of neural network
-type TrainItem struct {
-    Values matrices.Matrix
-    Label float64
-}
-
-// InitTrainItem initializes new training item - values and label
-func InitTrainItem(values []float64, label float64) (TrainItem, error) {
-    matrix, err := matrices.InitMatrixWithValues(1, len(values), values)
-    return TrainItem{matrix, label}, err
-}
 
 // NN represents neural network to be used with backpropagation
 type NN struct {
@@ -46,15 +34,13 @@ func (network NN) String() (result string) {
     result = "Neural network:\n"
     result += "layers:"
     for _, layer := range network.layers {
-        result += " " + strconv.Itoa(layer)
+        result += fmt.Sprintf("%2d", layer)
     }
-    result += "\n\nweights:"
-    for _, weights := range network.weights {
-        result += "\n" + weights.String()
+    for i, weights := range network.weights {
+        result += fmt.Sprintf("\nweights layer %d to %d:\n%s", i + 1, i, weights.String())
     }
-    result += "\n\nbiases:"
-    for _, biases := range network.biases {
-        result += "\n" + biases.String()
+    for i, biases := range network.biases {
+        result += fmt.Sprintf("\nbiases layer %d:\n%s", i + 1, biases.String())
     }
 
     return
@@ -167,17 +153,17 @@ func (network NN) updateMiniBatch(batch []TrainItem, eta float64) {
 func (network NN) backprop(item TrainItem) ([]matrices.Matrix, []matrices.Matrix) {
     deltaW := make([]matrices.Matrix, len(network.weights))
     deltaB := make([]matrices.Matrix, len(network.biases))
-    for i, m := range network.weights {
-        deltaW[i] = matrices.InitMatrix(m.Rows(), m.Cols())
-    }
-    for i, m := range network.biases {
-        deltaB[i] = matrices.InitMatrix(m.Rows(), m.Cols())
-    }
-
-    activation := item.Values
-    activations := make([]matrices.Matrix, len(network.weights) + 1)
-    activations[0] = item.Values
-    zs := make([]matrices.Matrix, len(network.weights))
+    // for i, m := range network.weights {
+    //     deltaW[i] = matrices.InitMatrix(m.Rows(), m.Cols())
+    // }
+    // for i, m := range network.biases {
+    //     deltaB[i] = matrices.InitMatrix(m.Rows(), m.Cols())
+    // }
+    //
+    // activation := item.Values
+    // activations := make([]matrices.Matrix, len(network.weights) + 1)
+    // activations[0] = item.Values
+    // zs := make([]matrices.Matrix, len(network.weights))
 
     return deltaW, deltaB
 }
