@@ -153,17 +153,43 @@ func (network NN) updateMiniBatch(batch []TrainItem, eta float64) {
 func (network NN) backprop(item TrainItem) ([]matrices.Matrix, []matrices.Matrix) {
     deltaW := make([]matrices.Matrix, len(network.weights))
     deltaB := make([]matrices.Matrix, len(network.biases))
-    // for i, m := range network.weights {
-    //     deltaW[i] = matrices.InitMatrix(m.Rows(), m.Cols())
-    // }
-    // for i, m := range network.biases {
-    //     deltaB[i] = matrices.InitMatrix(m.Rows(), m.Cols())
-    // }
-    //
-    // activation := item.Values
-    // activations := make([]matrices.Matrix, len(network.weights) + 1)
-    // activations[0] = item.Values
-    // zs := make([]matrices.Matrix, len(network.weights))
+    for i, m := range network.weights {
+        deltaW[i] = matrices.InitMatrix(m.Rows(), m.Cols())
+    }
+    for i, m := range network.biases {
+        deltaB[i] = matrices.InitMatrix(m.Rows(), m.Cols())
+    }
+
+    activation := item.Values
+    activations := make([]matrices.Matrix, len(network.weights) + 1)
+    activations[0] = activation
+    zs := make([]matrices.Matrix, len(network.weights))
+
+    for i := range network.weights {
+        weights := network.weights[i]
+        biases := network.biases[i]
+        multiplied, err := activation.Dot(weights)
+        if err != nil {
+            panic(err)
+        }
+        z, err := multiplied.Add(biases)
+        if err != nil {
+            panic(err)
+        }
+        zs[i] = z
+        activation = z.Sigmoid()
+        activations[i + 1] = activation
+    }
+
+    y, err := matrices.OneHotMatrix(1, network.layers[len(network.layers) - 1], 0, int(item.Label))
+    if err != nil {
+        panic(err)
+    }
+
+    delta, err := activations[len(activations) - 1].Sub(y)
+    if err != nil {
+        panic(err)
+    }
 
     return deltaW, deltaB
 }
