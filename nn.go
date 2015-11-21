@@ -119,14 +119,14 @@ func (network NN) updateMiniBatch(batch []TrainItem, eta float64) {
     }
 
     for _, item := range batch {
-        deltaW, deltaB := network.backprop(item)
-        for i, delta := range deltaW {
+        nablaW, nablaB := network.backprop(item)
+        for i, delta := range nablaW {
             cxw[i], err = cxw[i].Add(delta)
             if err != nil {
                 panic(err)
             }
         }
-        for i, delta := range deltaB {
+        for i, delta := range nablaB {
             cxb[i], err = cxb[i].Add(delta)
             if err != nil {
                 panic(err)
@@ -151,13 +151,13 @@ func (network NN) updateMiniBatch(batch []TrainItem, eta float64) {
 }
 
 func (network NN) backprop(item TrainItem) ([]matrices.Matrix, []matrices.Matrix) {
-    deltaW := make([]matrices.Matrix, len(network.weights))
-    deltaB := make([]matrices.Matrix, len(network.biases))
+    nablaW := make([]matrices.Matrix, len(network.weights))
+    nablaB := make([]matrices.Matrix, len(network.biases))
     for i, m := range network.weights {
-        deltaW[i] = matrices.InitMatrix(m.Rows(), m.Cols())
+        nablaW[i] = matrices.InitMatrix(m.Rows(), m.Cols())
     }
     for i, m := range network.biases {
-        deltaB[i] = matrices.InitMatrix(m.Rows(), m.Cols())
+        nablaB[i] = matrices.InitMatrix(m.Rows(), m.Cols())
     }
 
     activation := item.Values
@@ -181,15 +181,24 @@ func (network NN) backprop(item TrainItem) ([]matrices.Matrix, []matrices.Matrix
         activations[i + 1] = activation
     }
 
-    y, err := matrices.OneHotMatrix(1, network.layers[len(network.layers) - 1], 0, int(item.Label))
+    y, err := matrices.OneHotMatrix(1, item.Distinct, 0, int(item.Label))
     if err != nil {
         panic(err)
     }
 
-    delta, err := activations[len(activations) - 1].Sub(y)
+    costDerivative, err := activations[len(activations) - 1].Sub(y)
+    if err != nil {
+        panic(err)
+    }
+    delta, err := costDerivative.Mult(zs[len(zs) - 1].SigmoidPrime())
+    if err != nil {
+        panic(err)
+    }
+    nablaB[len(nablaB) - 1] = delta
+    nablaW[len(nablaW) - 1], err = activations[len(activations) - 2].Transpose().Dot(delta)
     if err != nil {
         panic(err)
     }
 
-    return deltaW, deltaB
+    return nablaW, nablaB
 }
