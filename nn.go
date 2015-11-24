@@ -82,7 +82,7 @@ func (network NN) Evaluate(inputs []TrainItem) float64 {
 }
 
 // Train trains Network on given input with given settings
-func (network NN) Train(inputs []TrainItem, epochs int, miniBatchSize int, eta float64) {
+func (network NN) Train(inputs []TrainItem, epochs int, miniBatchSize int, eta float64, testData []TrainItem) {
     inputCount := len(inputs)
     for i := 0; i < epochs; i++ {
         shuffled := make([]TrainItem, inputCount)
@@ -104,6 +104,12 @@ func (network NN) Train(inputs []TrainItem, epochs int, miniBatchSize int, eta f
         for _, batch := range batches {
             network.updateMiniBatch(batch, eta)
         }
+
+        if len(testData) > 0 {
+            fmt.Printf("Epoch %d: %f\n", i, network.Evaluate(testData))
+        } else {
+            fmt.Printf("Epoch %d finished.\n", i)
+        }
     }
 }
 
@@ -120,14 +126,14 @@ func (network NN) updateMiniBatch(batch []TrainItem, eta float64) {
 
     for _, item := range batch {
         nablaW, nablaB := network.backprop(item)
-        for i, delta := range nablaW {
-            cxw[i], err = cxw[i].Add(delta)
+        for i, nabla := range nablaW {
+            cxw[i], err = cxw[i].Add(nabla)
             if err != nil {
                 panic(err)
             }
         }
-        for i, delta := range nablaB {
-            cxb[i], err = cxb[i].Add(delta)
+        for i, nabla := range nablaB {
+            cxb[i], err = cxb[i].Add(nabla)
             if err != nil {
                 panic(err)
             }
@@ -198,6 +204,24 @@ func (network NN) backprop(item TrainItem) ([]matrices.Matrix, []matrices.Matrix
     nablaW[len(nablaW) - 1], err = activations[len(activations) - 2].Transpose().Dot(delta)
     if err != nil {
         panic(err)
+    }
+
+    for l := 2; l < len(network.layers); l++ {
+        z := zs[len(zs) - l]
+        sp := z.SigmoidPrime()
+        dotted, err := delta.Dot(network.weights[len(network.weights) - l + 1].Transpose())
+        if err != nil {
+            panic(err)
+        }
+        delta, err = dotted.Mult(sp)
+        if err != nil {
+            panic(err)
+        }
+        nablaB[len(nablaB) - l] = delta
+        nablaW[len(nablaW) - l], err = activations[len(activations) - l - 1].Transpose().Dot(delta)
+        if err != nil {
+            panic(err)
+        }
     }
 
     return nablaW, nablaB
