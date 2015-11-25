@@ -34,7 +34,7 @@ func (network NN) String() (result string) {
     result = "Neural network:\n"
     result += "layers:"
     for _, layer := range network.layers {
-        result += fmt.Sprintf("%2d", layer)
+        result += fmt.Sprintf(" %d", layer)
     }
     for i, weights := range network.weights {
         result += fmt.Sprintf("\nweights layer %d to %d:\n%s", i + 1, i, weights.String())
