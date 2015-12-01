@@ -2,6 +2,7 @@ package nn
 
 import (
     "fmt"
+    "math"
     "math/rand"
     "github.com/garretraziel/matrices"
 )
@@ -81,6 +82,32 @@ func (network NN) Evaluate(inputs []TrainItem) float64 {
     return float64(correct) / float64(len(inputs))
 }
 
+// Cost returns total cost of input training items for cross-entropy
+func (network NN) Cost(inputs []TrainItem) float64 {
+    cost := 0.0
+    for _, input := range inputs {
+        output := network.FeedForward(input.Values)
+        y, err := matrices.OneHotMatrix(1, input.Distinct, 0, int(input.Label))
+        if err != nil {
+            panic(err)
+        }
+        first, err := y.Apply(matrices.Negate).Mult(output.Apply(math.Log2))
+        if err != nil {
+            panic(err)
+        }
+        second, err := y.Apply(matrices.OneMinus).Mult(output.Apply(matrices.OneMinus).Apply(math.Log2))
+        if err != nil {
+            panic(err)
+        }
+        together, err := first.Sub(second)
+        if err != nil {
+            panic(err)
+        }
+        cost += together.Sum()
+    }
+    return cost / float64(len(inputs))
+}
+
 // Train trains Network on given input with given settings
 func (network NN) Train(inputs []TrainItem, epochs int, miniBatchSize int, eta float64, testData []TrainItem) {
     inputCount := len(inputs)
@@ -107,6 +134,7 @@ func (network NN) Train(inputs []TrainItem, epochs int, miniBatchSize int, eta f
 
         if len(testData) > 0 {
             fmt.Printf("Epoch %d: %f\n", i, network.Evaluate(testData))
+            fmt.Printf("cost: %f\n", network.Cost(testData))
         } else {
             fmt.Printf("Epoch %d finished.\n", i)
         }
@@ -192,11 +220,18 @@ func (network NN) backprop(item TrainItem) ([]matrices.Matrix, []matrices.Matrix
         panic(err)
     }
 
-    costDerivative, err := activations[len(activations) - 1].Sub(y)
-    if err != nil {
-        panic(err)
-    }
-    delta, err := costDerivative.Mult(zs[len(zs) - 1].SigmoidPrime())
+    // old code with MSE
+    // costDerivative, err := activations[len(activations) - 1].Sub(y)
+    // if err != nil {
+    //     panic(err)
+    // }
+    // delta, err := costDerivative.Mult(zs[len(zs) - 1].SigmoidPrime())
+    // if err != nil {
+    //     panic(err)
+    // }
+
+    // new code with cross-entropy
+    delta, err := activations[len(activations) - 1].Sub(y)
     if err != nil {
         panic(err)
     }
