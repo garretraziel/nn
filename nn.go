@@ -24,7 +24,7 @@ func InitNN(layers []int) NN {
     }
 
     for i := range layers[1:] {
-        weights[i] = matrices.RandInitMatrix(layers[i], layers[i + 1])
+        weights[i] = matrices.RandInitMatrixNormalized(layers[i], layers[i + 1])
     }
 
     net := NN{layers, weights, biases}
