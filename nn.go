@@ -109,7 +109,7 @@ func (network NN) Cost(inputs []TrainItem) float64 {
 }
 
 // Train trains Network on given input with given settings
-func (network NN) Train(inputs []TrainItem, epochs int, miniBatchSize int, eta float64, testData []TrainItem) {
+func (network NN) Train(inputs []TrainItem, epochs, miniBatchSize int, eta, lmbda float64, testData []TrainItem, printcost bool) {
     inputCount := len(inputs)
     for i := 0; i < epochs; i++ {
         shuffled := make([]TrainItem, inputCount)
@@ -129,19 +129,21 @@ func (network NN) Train(inputs []TrainItem, epochs int, miniBatchSize int, eta f
         }
 
         for _, batch := range batches {
-            network.updateMiniBatch(batch, eta)
+            network.updateMiniBatch(batch, eta, 0.1, len(inputs))
         }
 
         if len(testData) > 0 {
             fmt.Printf("Epoch %d: %f\n", i, network.Evaluate(testData))
-            fmt.Printf("cost: %f\n", network.Cost(testData))
+            if printcost {
+                fmt.Printf("cost: %f\n", network.Cost(testData))
+            }
         } else {
             fmt.Printf("Epoch %d finished.\n", i)
         }
     }
 }
 
-func (network NN) updateMiniBatch(batch []TrainItem, eta float64) {
+func (network NN) updateMiniBatch(batch []TrainItem, eta, lmbda float64, n int) {
     var err error
     cxw := make([]matrices.Matrix, len(network.weights))
     cxb := make([]matrices.Matrix, len(network.biases))
@@ -169,8 +171,9 @@ func (network NN) updateMiniBatch(batch []TrainItem, eta float64) {
     }
     multByConst := matrices.Mult(eta / float64(len(batch)))
     for i, w := range cxw {
+        regularization := matrices.Mult(1-eta*lmbda/float64(n))
         reduced := w.Apply(multByConst)
-        network.weights[i], err = network.weights[i].Sub(reduced)
+        network.weights[i], err = network.weights[i].Apply(regularization).Sub(reduced)
         if err != nil {
             panic(err)
         }
