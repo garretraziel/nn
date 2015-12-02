@@ -109,7 +109,7 @@ func (network NN) Cost(inputs []TrainItem) float64 {
 }
 
 // Train trains Network on given input with given settings
-func (network NN) Train(inputs []TrainItem, epochs, miniBatchSize int, eta, lmbda float64, testData []TrainItem, printcost bool) {
+func (network NN) Train(inputs []TrainItem, epochs, miniBatchSize int, eta, lmbda float64, testData []TrainItem, printCost bool) {
     inputCount := len(inputs)
     for i := 0; i < epochs; i++ {
         shuffled := make([]TrainItem, inputCount)
@@ -129,12 +129,12 @@ func (network NN) Train(inputs []TrainItem, epochs, miniBatchSize int, eta, lmbd
         }
 
         for _, batch := range batches {
-            network.updateMiniBatch(batch, eta, 0.1, len(inputs))
+            network.updateMiniBatch(batch, eta, lmbda, len(inputs))
         }
 
         if len(testData) > 0 {
             fmt.Printf("Epoch %d: %f\n", i, network.Evaluate(testData))
-            if printcost {
+            if printCost {
                 fmt.Printf("cost: %f\n", network.Cost(testData))
             }
         } else {
