@@ -282,6 +282,22 @@ func (network NN) MarshalJSON() ([]byte, error) {
     return json.Marshal(exportedNetwork)
 }
 
+// UnmarshalJSON implements Unmarshaler interface
+func (network *NN) UnmarshalJSON(serialized []byte) error {
+    var exportedNetwork struct {
+        Layers []int
+        Weights []matrices.Matrix
+        Biases []matrices.Matrix
+    }
+    if err := json.Unmarshal(serialized, &exportedNetwork); err != nil {
+        return err
+    }
+    network.layers = exportedNetwork.Layers
+    network.weights = exportedNetwork.Weights
+    network.biases = exportedNetwork.Biases
+    return nil
+}
+
 // Save exports network to file as JSON
 func (network NN) Save(path string) error {
     res, err := json.Marshal(network)
@@ -305,30 +321,7 @@ func LoadNetwork(path string) (NN, error) {
         return network, err
     }
 
-    var exportedNetwork struct {
-        Layers []int
-        Weights []struct {
-            Cols int
-            Values []float64
-        }
-        Biases []struct {
-            Cols int
-            Values []float64
-        }
-    }
-    if err := json.Unmarshal(dat, &exportedNetwork); err != nil {
-        return network, err
-    }
-    network.layers = exportedNetwork.Layers;
-    weights := make([]matrices.Matrix, len(exportedNetwork.Weights))
-    for i, weight := range exportedNetwork.Weights {
-        weights[i] = matrices.InitMatrixWithValues(weight.Cols, weight.Values)
-    }
-    network.weights = weights;
-    biases := make([]matrices.Matrix, len(exportedNetwork.Biases))
-    for i, bias := range exportedNetwork.Biases {
-        biases[i] = matrices.InitMatrixWithValues(bias.Cols, bias.Values)
-    }
-    network.biases = biases;
+    err = json.Unmarshal(dat, &network)
+
     return network, err
 }
