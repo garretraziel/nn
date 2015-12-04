@@ -1,9 +1,12 @@
 package nn
 
 import (
+    "os"
     "fmt"
     "math"
+    "io/ioutil"
     "math/rand"
+    "encoding/json"
     "github.com/garretraziel/matrices"
 )
 
@@ -263,4 +266,69 @@ func (network NN) backprop(item TrainItem) ([]matrices.Matrix, []matrices.Matrix
     }
 
     return nablaW, nablaB
+}
+
+// MarshalJSON implements Marshaler interface
+func (network NN) MarshalJSON() ([]byte, error) {
+    exportedNetwork := struct {
+        Layers []int
+        Weights []matrices.Matrix
+        Biases []matrices.Matrix
+    }{
+        network.layers,
+        network.weights,
+        network.biases,
+    }
+    return json.Marshal(exportedNetwork)
+}
+
+// Save exports network to file as JSON
+func (network NN) Save(path string) error {
+    res, err := json.Marshal(network)
+    if err != nil {
+        return err
+    }
+    f, err := os.Create(path)
+    if err != nil {
+        return err
+    }
+    defer f.Close()
+    _, err = f.Write(res)
+    return err
+}
+
+// LoadNetwork loads network from JSON file
+func LoadNetwork(path string) (NN, error) {
+    var network NN
+    dat, err := ioutil.ReadFile(path)
+    if err != nil {
+        return network, err
+    }
+
+    var exportedNetwork struct {
+        Layers []int
+        Weights []struct {
+            Cols int
+            Values []float64
+        }
+        Biases []struct {
+            Cols int
+            Values []float64
+        }
+    }
+    if err := json.Unmarshal(dat, &exportedNetwork); err != nil {
+        return network, err
+    }
+    network.layers = exportedNetwork.Layers;
+    weights := make([]matrices.Matrix, len(exportedNetwork.Weights))
+    for i, weight := range exportedNetwork.Weights {
+        weights[i] = matrices.InitMatrixWithValues(weight.Cols, weight.Values)
+    }
+    network.weights = weights;
+    biases := make([]matrices.Matrix, len(exportedNetwork.Biases))
+    for i, bias := range exportedNetwork.Biases {
+        biases[i] = matrices.InitMatrixWithValues(bias.Cols, bias.Values)
+    }
+    network.biases = biases;
+    return network, err
 }

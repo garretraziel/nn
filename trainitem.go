@@ -10,7 +10,7 @@ type TrainItem struct {
 }
 
 // InitTrainItem initializes new training item - values and label
-func InitTrainItem(values []float64, label float64, distinct int) (TrainItem, error) {
-    matrix, err := matrices.InitMatrixWithValues(1, len(values), values)
-    return TrainItem{matrix, label, distinct}, err
+func InitTrainItem(values []float64, label float64, distinct int) TrainItem {
+    matrix := matrices.InitMatrixWithValues(len(values), values)
+    return TrainItem{matrix, label, distinct}
 }
