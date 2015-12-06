@@ -30,8 +30,22 @@ func InitNN(layers []int) NN {
         weights[i] = matrices.RandInitMatrixNormalized(layers[i], layers[i + 1])
     }
 
-    net := NN{layers, weights, biases}
-    return net
+    return NN{layers, weights, biases}
+}
+
+// Copy creates copy if given network
+func (network NN) Copy() NN {
+    layers := make([]int, len(network.layers))
+    copy(layers, network.layers)
+    biases := make([]matrices.Matrix, len(network.biases))
+    for i, bias := range network.biases {
+        biases[i] = bias.Copy()
+    }
+    weights := make([]matrices.Matrix, len(network.weights))
+    for i, weight := range network.weights {
+        weights[i] = weight.Copy()
+    }
+    return NN{layers, biases, weights}
 }
 
 func (network NN) String() (result string) {
@@ -114,7 +128,22 @@ func (network NN) Cost(inputs []TrainItem) float64 {
 // Train trains Network on given input with given settings
 func (network NN) Train(inputs []TrainItem, epochs, miniBatchSize int, eta, lmbda float64, testData []TrainItem, printCost bool) {
     inputCount := len(inputs)
-    for i := 0; i < epochs; i++ {
+    i := 0
+    doingBestOfN := false
+    if epochs < 0 {
+        doingBestOfN = true
+        epochs = -epochs
+    }
+    bestCost := network.Cost(testData)
+    bestNetwork := network.Copy()
+    bestBefore := 0
+    for {
+        if !doingBestOfN && i >= epochs {
+            break
+        } else if doingBestOfN && bestBefore >= epochs {
+            network = bestNetwork
+            break
+        }
         shuffled := make([]TrainItem, inputCount)
         perm := rand.Perm(inputCount)
         for i, v := range perm {
@@ -135,14 +164,26 @@ func (network NN) Train(inputs []TrainItem, epochs, miniBatchSize int, eta, lmbd
             network.updateMiniBatch(batch, eta, lmbda, len(inputs))
         }
 
+        cost := network.Cost(testData)
+        if doingBestOfN {
+            if cost < bestCost {
+                bestCost = cost
+                bestNetwork = network.Copy()
+                bestBefore = 0
+            } else {
+                bestBefore++
+            }
+        }
+
         if len(testData) > 0 {
             fmt.Printf("Epoch %d: %f\n", i, network.Evaluate(testData))
             if printCost {
-                fmt.Printf("cost: %f\n", network.Cost(testData))
+                fmt.Printf("cost: %f\n", cost)
             }
         } else {
             fmt.Printf("Epoch %d finished.\n", i)
         }
+        i++
     }
 }
 
