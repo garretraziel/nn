@@ -126,7 +126,8 @@ func (network NN) Cost(inputs []TrainItem) float64 {
 }
 
 // Train trains Network on given input with given settings
-func (network NN) Train(inputs []TrainItem, epochs, miniBatchSize int, eta, lmbda float64, testData []TrainItem, printCost bool) {
+func (network NN) Train(inputs []TrainItem, epochs, miniBatchSize int, eta, etaFraction, lmbda float64, testData []TrainItem, printCost bool) {
+    oldEta := eta
     inputCount := len(inputs)
     i := 0
     doingBestOfN := false
@@ -141,8 +142,13 @@ func (network NN) Train(inputs []TrainItem, epochs, miniBatchSize int, eta, lmbd
         if !doingBestOfN && i >= epochs {
             break
         } else if doingBestOfN && bestBefore >= epochs {
-            network = bestNetwork
-            break
+            if etaFraction > 0 && eta * etaFraction > oldEta {
+                bestBefore = 0
+                eta /= 2.0
+            } else {
+                network = bestNetwork
+                break
+            }
         }
         shuffled := make([]TrainItem, inputCount)
         perm := rand.Perm(inputCount)
@@ -178,7 +184,7 @@ func (network NN) Train(inputs []TrainItem, epochs, miniBatchSize int, eta, lmbd
         if len(testData) > 0 {
             fmt.Printf("Epoch %d: %f\n", i, network.Evaluate(testData))
             if printCost {
-                fmt.Printf("cost: %f\n", cost)
+                fmt.Printf("Cost: %f\n", cost)
             }
         } else {
             fmt.Printf("Epoch %d finished.\n", i)
